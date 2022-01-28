@@ -380,12 +380,12 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 }
 
 void
-drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h)
+drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h, unsigned int border_width)
 {
 	if (!drw)
 		return;
 
-	XCopyArea(drw->dpy, drw->drawable, win, drw->gc, x, y, w, h, x, y);
+	XCopyArea(drw->dpy, drw->drawable, win, drw->gc, x, y, w, h, x + border_width, y + border_width);
 	XSync(drw->dpy, False);
 }
 

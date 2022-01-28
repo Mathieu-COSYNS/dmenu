@@ -188,7 +188,7 @@ drawmenu(void)
 			drw_text(drw, mw - w, 0, w, bh, lrpad / 2, ">", 0);
 		}
 	}
-	drw_map(drw, win, 0, 0, mw, mh);
+	drw_map(drw, win, 0, 0, mw, mh, border_width);
 }
 
 static void
@@ -594,7 +594,7 @@ run(void)
 			exit(1);
 		case Expose:
 			if (ev.xexpose.count == 0)
-				drw_map(drw, win, 0, 0, mw, mh);
+				drw_map(drw, win, 0, 0, mw, mh, border_width);
 			break;
 		case FocusIn:
 			/* regrab focus from parent window */
@@ -671,13 +671,13 @@ setup(void)
 					break;
 
 		if (centered) {
-			mw = MIN(MAX(max_textw() + promptw, min_width), info[i].width);
-			x = info[i].x_org + ((info[i].width  - mw) / 2);
+			mw = MIN(MAX(max_textw() + promptw, min_width), info[i].width) - border_width * 2;
+			x = info[i].x_org + ((info[i].width - mw) / 2) - border_width;
 			y = info[i].y_org + (centered_height >= 0 ? centered_height : ((info[i].height - mh) / 2));
 		} else {
 			x = info[i].x_org;
 			y = info[i].y_org + (topbar ? 0 : info[i].height - mh);
-			mw = info[i].width;
+			mw = info[i].width - border_width * 2;
 		}
 
 		XFree(info);
@@ -689,13 +689,13 @@ setup(void)
 			    parentwin);
 
 		if (centered) {
-			mw = MIN(MAX(max_textw() + promptw, min_width), wa.width);
-			x = (wa.width  - mw) / 2;
+			mw = MIN(MAX(max_textw() + promptw, min_width), wa.width) - border_width * 2;
+			x = ((wa.width - mw) / 2) - border_width;
 			y = centered_height >= 0 ? centered_height : (wa.height - mh) / 2;
 		} else {
 			x = 0;
 			y = topbar ? 0 : wa.height - mh;
-			mw = wa.width;
+			mw = wa.width - border_width * 20;
 		}
 	}
 	inputw = MIN(inputw, mw/3);
@@ -705,7 +705,7 @@ setup(void)
 	swa.override_redirect = True;
 	swa.background_pixel = scheme[SchemeNorm][ColBg].pixel;
 	swa.event_mask = ExposureMask | KeyPressMask | VisibilityChangeMask;
-	win = XCreateWindow(dpy, parentwin, x, y, mw, mh, 0,
+	win = XCreateWindow(dpy, parentwin, x, y, mw + border_width * 2, mh + border_width * 2, 0,
 	                    CopyFromParent, CopyFromParent, CopyFromParent,
 	                    CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
 	XSetClassHint(dpy, win, &ch);
@@ -728,6 +728,17 @@ setup(void)
 		}
 		grabfocus();
 	}
+	
+	XRectangle rectangles[4] = {
+		{0, 0, mw + border_width * 2, border_width},
+		{0, 0, border_width, mh + border_width * 2},
+		{0, mh + border_width, mw + border_width * 2, border_width},
+		{mw + border_width, 0, border_width, mh + border_width * 2}};
+
+	XSetForeground(drw->dpy, drw->gc, scheme[SchemeSel][ColBg].pixel);
+	XDrawRectangles(drw->dpy, win, drw->gc, rectangles, 4);
+	XFillRectangles(drw->dpy, win, drw->gc, rectangles, 4);
+
 	drw_resize(drw, mw, mh);
 	drawmenu();
 }
@@ -791,6 +802,8 @@ main(int argc, char *argv[])
 			colors[SchemeSel][ColFg] = argv[++i];
 		else if (!strcmp(argv[i], "-w"))   /* embedding window id */
 			embed = argv[++i];
+		else if (!strcmp(argv[i], "-bw"))
+			border_width = atoi(argv[++i]); /* border width */
 		else
 			usage();
 
@@ -805,7 +818,7 @@ main(int argc, char *argv[])
 	if (!XGetWindowAttributes(dpy, parentwin, &wa))
 		die("could not get embedding window attributes: 0x%lx",
 		    parentwin);
-	drw = drw_create(dpy, screen, root, wa.width, wa.height);
+	drw = drw_create(dpy, screen, root, wa.width - border_width * 2, wa.height - border_width * 2);
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
 	lrpad = drw->fonts->h;

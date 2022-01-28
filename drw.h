@@ -54,4 +54,4 @@ void drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled
 int drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, const char *text, int invert);
 
 /* Map functions */
-void drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h);
+void drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h, unsigned int border_width);

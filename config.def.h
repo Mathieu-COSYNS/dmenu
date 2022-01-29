@@ -35,3 +35,6 @@ static const char worddelimiters[] = " ";
 
 /* Size of the window border */
 static unsigned int border_width = 2;
+
+ /* if 0, dmenu doesn't use fuzzy matching. Option -F can set fuzzy to 0 */
+static int fuzzy = 1;

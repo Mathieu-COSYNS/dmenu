@@ -670,13 +670,13 @@ setup(void)
 				if (INTERSECT(x, y, 1, 1, info[i]))
 					break;
 
-		if (centered) {
+		if (position == CENTER) {
 			mw = MIN(MAX(max_textw() + promptw, min_width), info[i].width) - border_width * 2;
 			x = info[i].x_org + ((info[i].width - mw) / 2) - border_width;
 			y = info[i].y_org + (centered_height >= 0 ? centered_height : ((info[i].height - mh) / 2));
 		} else {
 			x = info[i].x_org;
-			y = info[i].y_org + (topbar ? 0 : info[i].height - mh);
+			y = info[i].y_org + (position == TOP ? 0 : info[i].height - mh - border_width * 2);
 			mw = info[i].width - border_width * 2;
 		}
 
@@ -688,13 +688,13 @@ setup(void)
 			die("could not get embedding window attributes: 0x%lx",
 			    parentwin);
 
-		if (centered) {
+		if (position == CENTER) {
 			mw = MIN(MAX(max_textw() + promptw, min_width), wa.width) - border_width * 2;
 			x = ((wa.width - mw) / 2) - border_width;
 			y = centered_height >= 0 ? centered_height : (wa.height - mh) / 2;
 		} else {
 			x = 0;
-			y = topbar ? 0 : wa.height - mh;
+			y = position == TOP ? 0 : wa.height - mh - border_width * 2;
 			mw = wa.width - border_width * 20;
 		}
 	}
@@ -763,11 +763,11 @@ main(int argc, char *argv[])
 			puts("dmenu-"VERSION);
 			exit(0);
 		} else if (!strcmp(argv[i], "-t"))   /* centers dmenu on screen */
-			centered = 0;
+			position = TOP;
 		else if (!strcmp(argv[i], "-b")) /* appears at the bottom of the screen */
-			topbar = 0;
+			position = BOTTOM;
 		else if (!strcmp(argv[i], "-c"))   /* centers dmenu on screen */
-			centered = 1;
+			position = CENTER;
 		else if (!strcmp(argv[i], "-f"))   /* grabs keyboard before reading stdin */
 			fast = 1;
 		else if (!strcmp(argv[i], "-i")) { /* case-insensitive item matching */

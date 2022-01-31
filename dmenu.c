@@ -619,6 +619,13 @@ insert:
 		break;
 	case XK_Return:
 	case XK_KP_Enter:
+		if (restrict_return) {
+			if (!sel || ev->state & (ShiftMask | ControlMask))
+				break;
+			puts(sel->text);
+			cleanup();
+			exit(0);
+		}
 		puts((sel && !(ev->state & ShiftMask)) ? sel->text : text);
 		if (!(ev->state & ControlMask)) {
 			cleanup();
@@ -907,7 +914,9 @@ main(int argc, char *argv[])
 		} else if (!strcmp(argv[i], "-s")) { /* case-sensitive item matching */
 			fstrncmp = strncmp;
 			fstrstr = strstr;
-		} else if (!strcmp(argv[i], "-F"))   /* disable fuzzy matching */
+		} else if (!strcmp(argv[i], "-r"))
+			restrict_return = 1;
+		else if (!strcmp(argv[i], "-F"))   /* disable fuzzy matching */
 			fuzzy = 0;
 		else if (!strcmp(argv[i], "-P"))   /* is the input a password */
 			passwd = 1;

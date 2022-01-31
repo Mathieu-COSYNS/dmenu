@@ -13,6 +13,7 @@ typedef struct Fnt {
 } Fnt;
 
 enum { ColFg, ColBg }; /* Clr scheme index */
+enum { AlignL, AlignR };
 typedef XftColor Clr;
 
 typedef struct {
@@ -25,6 +26,13 @@ typedef struct {
 	Clr *scheme;
 	Fnt *fonts;
 } Drw;
+
+typedef struct {
+	char *text;
+	unsigned int cursor;
+	int cursor_position;
+	int old_text_width_left;
+} Input;
 
 /* Drawable abstraction */
 Drw *drw_create(Display *dpy, int screen, Window win, unsigned int w, unsigned int h);
@@ -52,6 +60,8 @@ void drw_setscheme(Drw *drw, Clr *scm);
 /* Drawing functions */
 void drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int invert);
 int drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, const char *text, int invert);
+int drw_input_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lrpad, Input *input);
+int drw_text_align(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int textlen, int align);
 
 /* Map functions */
 void drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h, unsigned int border_width);

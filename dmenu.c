@@ -947,7 +947,7 @@ setup(void)
 static void
 usage(void)
 {
-	fputs("\nusage: dmenu [-bcfistvFP] [-l lines] [-h height] [-p prompt]\n"
+	fputs("\nusage: dmenu [-bcfirstvFP] [-l lines] [-h height] [-p prompt]\n"
 	      "             [-fn font] [-m monitor] [-w windowid]\n"
 				"             [-nhb color] [-nhf color] [-shb color] [-shf color]\n"
 	      "             [-nb color] [-nf color] [-sb color] [-sf color]\n", stderr);

@@ -365,7 +365,7 @@ match(void)
 	char buf[sizeof text], *s;
 	int i, tokc = 0;
 	size_t len, textsize;
-	struct item *item, *lprefix, *lsubstr, *prefixend, *substrend;
+	struct item *item, *lprefix, *prefixend;
 
 	strcpy(buf, text);
 	/* separate input text into tokens to be matched individually */
@@ -374,8 +374,8 @@ match(void)
 			die("cannot realloc %u bytes:", tokn * sizeof *tokv);
 	len = tokc ? strlen(tokv[0]) : 0;
 
-	matches = lprefix = lsubstr = matchend = prefixend = substrend = NULL;
-	textsize = strlen(text) + 1;
+	matches = lprefix = matchend = prefixend = NULL;
+	textsize = strlen(text);
 	for (item = items; item && item->text; item++) {
 		for (i = 0; i < tokc; i++)
 			if (!fstrstr(item->text, tokv[i]))
@@ -387,8 +387,6 @@ match(void)
 			appenditem(item, &matches, &matchend);
 		else if (!fstrncmp(tokv[0], item->text, len))
 			appenditem(item, &lprefix, &prefixend);
-		else
-			appenditem(item, &lsubstr, &substrend);
 	}
 	if (lprefix) {
 		if (matches) {
@@ -397,14 +395,6 @@ match(void)
 		} else
 			matches = lprefix;
 		matchend = prefixend;
-	}
-	if (lsubstr) {
-		if (matches) {
-			matchend->right = lsubstr;
-			lsubstr->left = matchend;
-		} else
-			matches = lsubstr;
-		matchend = substrend;
 	}
 	curr = sel = matches;
 	calcoffsets();
@@ -455,6 +445,7 @@ keypress(XKeyEvent *ev)
 {
 	char buf[32];
 	int len;
+	struct item * item;
 	KeySym ksym;
 	Status status;
 
@@ -651,11 +642,20 @@ insert:
 		}
 		break;
 	case XK_Tab:
-		if (!sel)
-			return;
-		strncpy(text, sel->text, sizeof text - 1);
+		if (!matches) break; /* cannot complete no matches */
+		strncpy(text, matches->text, sizeof text - 1);
 		text[sizeof text - 1] = '\0';
-		cursor = strlen(text);
+		int initial_cursor = cursor;
+		len = cursor = strlen(text); /* length of longest common prefix */
+		for (item = matches; item && item->text; item = item->right) {
+			if(!!fstrncmp(text, item->text, initial_cursor))
+				continue;
+			cursor = 0;
+			while (cursor < len && !fstrncmp(text+cursor, item->text+cursor, 1))
+				cursor++;
+			len = cursor;
+		}
+		memset(text + len, '\0', strlen(text) - len);
 		match();
 		break;
 	}

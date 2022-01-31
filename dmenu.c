@@ -32,9 +32,9 @@ enum { SchemeNorm, SchemeSel, SchemeNormOut, SchemeSelOut,
 			 SchemeBorder, SchemePrompt, SchemeLast }; /* color schemes */
 
 struct item {
+	int id;
 	char *text;
 	struct item *left, *right;
-	int out;
 	double distance;
 };
 
@@ -49,6 +49,9 @@ static struct item *matches, *matchend;
 static struct item *prev, *curr, *next, *sel;
 static int mon = -1, screen;
 
+static int *selected_items = NULL;
+static unsigned int selected_items_size = 0;
+
 static Atom clip, utf8;
 static Display *dpy;
 static Window root, parentwin, win;
@@ -62,6 +65,49 @@ static Clr *scheme[SchemeLast];
 static char * cistrstr(const char *s, const char *sub);
 static int (*fstrncmp)(const char *, const char *, size_t) = strncasecmp;
 static char *(*fstrstr)(const char *, const char *) = cistrstr;
+
+static void
+select_item(const struct item * const item)
+{
+	for (int i = 0;i < selected_items_size;i++)
+		if (selected_items[i] == -1) {
+			selected_items[i] = sel->id;
+			return;
+		}
+	selected_items_size++;
+	selected_items = realloc(selected_items, (selected_items_size + 1) * sizeof(size_t));
+	selected_items[selected_items_size - 1] = sel->id;
+}
+
+static void
+unselect_item(const struct item * const item)
+{
+	for (int i = 0;i < selected_items_size;i++)
+		if (selected_items[i] == sel->id) {
+			selected_items[i] = -1;
+			return;
+		}
+}
+
+static int
+is_selected(const struct item * const item)
+{
+	for (int i = 0;i < selected_items_size;i++)
+		if (selected_items[i] == item->id)
+			return 1;
+	return 0;
+}
+
+static void
+toggle_selected(const struct item * const item)
+{
+	if (!item)
+		return;
+	if(is_selected(item))
+		unselect_item(item);
+	else
+		select_item(item);
+}
 
 static void
 appenditem(struct item *item, struct item **list, struct item **last)
@@ -114,6 +160,7 @@ cleanup(void)
 	drw_free(drw);
 	XSync(dpy, False);
 	XCloseDisplay(dpy);
+	free(selected_items);
 }
 
 static char *
@@ -137,11 +184,11 @@ drawhighlights(struct item *item, int x, int y, int maxw)
 	if (!(strlen(item->text) && strlen(text)))
 		return;
 
-	if (item == sel && item->out)
+	if (item == sel && is_selected(item))
 		drw_setscheme(drw, scheme[SchemeSelOutHighlight]);
 	else if (item == sel)
 		drw_setscheme(drw, scheme[SchemeSelHighlight]);
-	else if (item->out)
+	else if (is_selected(item))
 		drw_setscheme(drw, scheme[SchemeNormOutHighlight]);
 	else
 		drw_setscheme(drw, scheme[SchemeNormHighlight]);
@@ -176,11 +223,11 @@ static int
 drawitem(struct item *item, int x, int y, int w)
 {
 	int r;
-	if (item == sel && item->out)
+	if (item == sel && is_selected(item))
 		drw_setscheme(drw, scheme[SchemeSelOut]);
 	else if (item == sel)
 		drw_setscheme(drw, scheme[SchemeSel]);
-	else if (item->out)
+	else if (is_selected(item))
 		drw_setscheme(drw, scheme[SchemeNormOut]);
 	else
 		drw_setscheme(drw, scheme[SchemeNorm]);
@@ -195,7 +242,7 @@ drawmenu(void)
 {
 	static Input input;
 	struct item *item;
-	int x = 0, y = 0, fh = drw->fonts->h, w;
+	int x = 0, y = 0, w;
 
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	drw_rect(drw, 0, 0, mw, mh, 1, 1);
@@ -517,6 +564,8 @@ keypress(XKeyEvent *ev)
 			goto draw;
 		case XK_Return:
 		case XK_KP_Enter:
+			if(!restrict_return)
+				toggle_selected(sel);
 			break;
 		case XK_bracketleft:
 			cleanup();
@@ -628,13 +677,17 @@ insert:
 			cleanup();
 			exit(0);
 		}
-		puts((sel && !(ev->state & ShiftMask)) ? sel->text : text);
 		if (!(ev->state & ControlMask)) {
+			for (int i = 0;i < selected_items_size;i++)
+				if (selected_items[i] != -1 && (!sel || sel->id != selected_items[i]))
+					puts(items[selected_items[i]].text);
+			if (sel && !(ev->state & ShiftMask))
+				puts(sel->text);
+			else
+				puts(text);
 			cleanup();
 			exit(0);
 		}
-		if (sel)
-			sel->out = 1;
 		break;
 	case XK_Right:
 	case XK_KP_Right:
@@ -713,7 +766,7 @@ readstdin(void)
 			*p = '\0';
 		if (!(items[i].text = strdup(buf)))
 			die("cannot strdup %u bytes:", strlen(buf) + 1);
-		items[i].out = 0;
+		items[i].id = i; /* for multiselect */
 		drw_font_getexts(drw->fonts, buf, strlen(buf), &tmpmax, NULL);
 		if (tmpmax > inputw) {
 			inputw = tmpmax;

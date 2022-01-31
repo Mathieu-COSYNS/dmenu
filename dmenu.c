@@ -184,10 +184,9 @@ drawitem(struct item *item, int x, int y, int w)
 static void
 drawmenu(void)
 {
-	unsigned int curpos;
+	static Input input;
 	struct item *item;
 	int x = 0, y = 0, fh = drw->fonts->h, w;
-	char *censort;
 
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	drw_rect(drw, 0, 0, mw, mh, 1, 1);
@@ -196,37 +195,40 @@ drawmenu(void)
 		drw_setscheme(drw, scheme[SchemeSel]);
 		x = drw_text(drw, x, 0, promptw, bh, lrpad / 2, prompt, 0);
 	}
+
 	/* draw input field */
 	w = (lines > 0 || !matches) ? mw - x : inputw;
-	drw_setscheme(drw, scheme[SchemeNorm]);
-	if (passwd) {
-	        censort = ecalloc(1, sizeof(text));
-		memset(censort, '*', strlen(text));
-		drw_text(drw, x, 0, w, bh, lrpad / 2, censort, 0);
-		free(censort);
-	} else drw_text(drw, x, 0, w, bh, lrpad / 2, text, 0);
 
-	curpos = TEXTW(text) - TEXTW(&text[cursor]);
-	if ((curpos += lrpad / 2 - 1) < w) {
-		drw_setscheme(drw, scheme[SchemeNorm]);
-		drw_rect(drw, x + curpos, 2 + (bh - fh) / 2, 2, fh - 4, 1, 0);
+	input.cursor = cursor;
+	input.text = text;
+
+	if (passwd) {
+	  input.text = ecalloc(1, sizeof(text));
+		memset(input.text, '*', strlen(text));
+	};
+
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_input_text(drw, x, 0, w, bh, lrpad, &input);
+
+	if(passwd) {
+		free(input.text);
 	}
 
 	if (lines > 0) {
 		/* draw vertical list */
 		for (item = curr; item != next; item = item->right)
-			drawitem(item, x - promptw, y += bh, mw);
+			drawitem(item, 0, y += bh, mw);
 	} else if (matches) {
 		/* draw horizontal list */
 		x += inputw;
-		w = TEXTW(symbol_left);
 		if (curr->left) {
+			w = TEXTW(symbol_left);
 			drw_setscheme(drw, scheme[SchemeNorm]);
 			drw_text(drw, x, 0, w, bh, lrpad / 2, symbol_left, 0);
+			x += w;
 		}
-		x += w;
 		for (item = curr; item != next; item = item->right)
-			x = drawitem(item, x, 0, MIN(TEXTW(item->text), mw - x - TEXTW(symbol_right)));
+			x = drawitem(item, x, 0, MIN(TEXTW(item->text), mw - x - (next ? TEXTW(symbol_right) : 0)));
 		if (next) {
 			w = TEXTW(symbol_right);
 			drw_setscheme(drw, scheme[SchemeNorm]);
@@ -972,7 +974,7 @@ main(int argc, char *argv[])
 	drw = drw_create(dpy, screen, root, wa.width - border_width * 2, wa.height - border_width * 2);
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
-	lrpad = drw->fonts->h;
+	lrpad = drw->fonts->h * 0.75;
 
 #ifdef __OpenBSD__
 	if (pledge("stdio rpath", NULL) == -1)

@@ -43,3 +43,6 @@ static unsigned int border_width = 2;
 
  /* if 0, dmenu doesn't use fuzzy matching. Option -F can set fuzzy to 0 */
 static int fuzzy = 1;
+
+/* -r option; if 1, disables shift-return and ctrl-return */
+static int restrict_return = 0;

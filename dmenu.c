@@ -27,8 +27,9 @@
 #define TEXTW(X)              (drw_fontset_getwidth(drw, (X)) + lrpad)
 
 /* enums */
-enum { SchemeNorm, SchemeSel, SchemeNormHighlight, SchemeSelHighlight,
-       SchemeOut, SchemeLast }; /* color schemes */
+enum { SchemeNorm, SchemeSel, SchemeNormOut, SchemeSelOut,
+			 SchemeNormHighlight, SchemeSelHighlight, SchemeNormOutHighlight, SchemeSelOutHighlight,
+			 SchemeBorder, SchemePrompt, SchemeLast }; /* color schemes */
 
 struct item {
 	char *text;
@@ -136,9 +137,15 @@ drawhighlights(struct item *item, int x, int y, int maxw)
 	if (!(strlen(item->text) && strlen(text)))
 		return;
 
-	drw_setscheme(drw, scheme[item == sel
-	                   ? SchemeSelHighlight
-	                   : SchemeNormHighlight]);
+	if (item == sel && item->out)
+		drw_setscheme(drw, scheme[SchemeSelOutHighlight]);
+	else if (item == sel)
+		drw_setscheme(drw, scheme[SchemeSelHighlight]);
+	else if (item->out)
+		drw_setscheme(drw, scheme[SchemeNormOutHighlight]);
+	else
+		drw_setscheme(drw, scheme[SchemeNormHighlight]);
+
 	for (i = 0, highlight = item->text; *highlight && text[i];) {
 		if (!fstrncmp(highlight, text+i, 1)) {
 			/* get indentation */
@@ -169,10 +176,12 @@ static int
 drawitem(struct item *item, int x, int y, int w)
 {
 	int r;
-	if (item == sel)
+	if (item == sel && item->out)
+		drw_setscheme(drw, scheme[SchemeSelOut]);
+	else if (item == sel)
 		drw_setscheme(drw, scheme[SchemeSel]);
 	else if (item->out)
-		drw_setscheme(drw, scheme[SchemeOut]);
+		drw_setscheme(drw, scheme[SchemeNormOut]);
 	else
 		drw_setscheme(drw, scheme[SchemeNorm]);
 
@@ -192,7 +201,7 @@ drawmenu(void)
 	drw_rect(drw, 0, 0, mw, mh, 1, 1);
 
 	if (prompt && *prompt) {
-		drw_setscheme(drw, scheme[SchemeSel]);
+		drw_setscheme(drw, scheme[SchemePrompt]);
 		x = drw_text(drw, x, 0, promptw, bh, lrpad / 2, prompt, 0);
 	}
 
@@ -874,7 +883,7 @@ setup(void)
 		{0, mh + border_width, mw + border_width * 2, border_width},
 		{mw + border_width, 0, border_width, mh + border_width * 2}};
 
-	XSetForeground(drw->dpy, drw->gc, scheme[SchemeSel][ColBg].pixel);
+	XSetForeground(drw->dpy, drw->gc, scheme[SchemeBorder][ColBg].pixel);
 	XDrawRectangles(drw->dpy, win, drw->gc, rectangles, 4);
 	XFillRectangles(drw->dpy, win, drw->gc, rectangles, 4);
 

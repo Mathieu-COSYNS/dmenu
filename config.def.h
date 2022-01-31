@@ -20,11 +20,16 @@ static const char *symbol_left = "";
 static const char *symbol_right = "";
 static const char *colors[SchemeLast][2] = {
 	/*     fg         bg       */
-	[SchemeNorm] = { "#bbbbbb", "#222222" },
-	[SchemeSel] = { "#eeeeee", "#005577" },
-	[SchemeSelHighlight] = { "#ffc978", "#005577" },
-	[SchemeNormHighlight] = { "#ffc978", "#222222" },
-	[SchemeOut] = { "#000000", "#00ffff" },
+	[SchemeNorm] = { "#dadada", "#383838" },
+	[SchemeSel] = { "#fff", "#4c4c4c" },
+	[SchemeNormOut] = { "#fff", "#3f7368" },
+	[SchemeSelOut] = { "#fff", "#579c8e" },
+	[SchemeNormHighlight] = { "#ffce50", "#383838" },
+	[SchemeSelHighlight] = { "#ffce50", "#4c4c4c" },
+	[SchemeNormOutHighlight] = { "#ffd06f", "#3f7368" },
+	[SchemeSelOutHighlight] = { "#ffd06f", "#579c8e" },
+	[SchemeBorder] = { "#fff", "#579c8e" },
+	[SchemePrompt] = { "#fff", "#579c8e" },
 };
 /* -l option; if nonzero, dmenu uses vertical list with given number of lines */
 static unsigned int lines = 20;
@@ -39,7 +44,7 @@ static unsigned int min_lineheight = 8;
 static const char worddelimiters[] = " ";
 
 /* Size of the window border */
-static unsigned int border_width = 2;
+static unsigned int border_width = 1;
 
  /* if 0, dmenu doesn't use fuzzy matching. Option -F can set fuzzy to 0 */
 static int fuzzy = 1;

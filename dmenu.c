@@ -32,7 +32,7 @@ enum { SchemeNorm, SchemeSel, SchemeNormOut, SchemeSelOut,
 			 SchemeBorder, SchemePrompt, SchemeLast }; /* color schemes */
 
 struct item {
-	int id;
+	int index;
 	char *text;
 	struct item *left, *right;
 	double distance;
@@ -71,19 +71,19 @@ select_item(const struct item * const item)
 {
 	for (int i = 0;i < selected_items_size;i++)
 		if (selected_items[i] == -1) {
-			selected_items[i] = sel->id;
+			selected_items[i] = sel->index;
 			return;
 		}
 	selected_items_size++;
 	selected_items = realloc(selected_items, (selected_items_size + 1) * sizeof(size_t));
-	selected_items[selected_items_size - 1] = sel->id;
+	selected_items[selected_items_size - 1] = sel->index;
 }
 
 static void
 unselect_item(const struct item * const item)
 {
 	for (int i = 0;i < selected_items_size;i++)
-		if (selected_items[i] == sel->id) {
+		if (selected_items[i] == sel->index) {
 			selected_items[i] = -1;
 			return;
 		}
@@ -93,7 +93,7 @@ static int
 is_selected(const struct item * const item)
 {
 	for (int i = 0;i < selected_items_size;i++)
-		if (selected_items[i] == item->id)
+		if (selected_items[i] == item->index)
 			return 1;
 	return 0;
 }
@@ -673,18 +673,28 @@ insert:
 		if (restrict_return) {
 			if (!sel || ev->state & (ShiftMask | ControlMask))
 				break;
-			puts(sel->text);
+			if(print_index)
+				printf("%d\n", sel->index);
+			else
+				puts(sel->text);
 			cleanup();
 			exit(0);
 		}
 		if (!(ev->state & ControlMask)) {
 			for (int i = 0;i < selected_items_size;i++)
-				if (selected_items[i] != -1 && (!sel || sel->id != selected_items[i]))
-					puts(items[selected_items[i]].text);
+				if (selected_items[i] != -1 && (!sel || sel->index != selected_items[i])) {
+					if(print_index)
+						printf("%d\n", items[selected_items[i]].index);
+					else
+						puts(items[selected_items[i]].text);
+				}
 			if (sel && !(ev->state & ShiftMask))
-				puts(sel->text);
+				if(print_index)
+					printf("%d\n", sel->index);
+				else
+					puts(sel->text);
 			else
-				puts(text);
+				puts(print_index ? "-1" : text);
 			cleanup();
 			exit(0);
 		}
@@ -766,7 +776,7 @@ readstdin(void)
 			*p = '\0';
 		if (!(items[i].text = strdup(buf)))
 			die("cannot strdup %u bytes:", strlen(buf) + 1);
-		items[i].id = i; /* for multiselect */
+		items[i].index = i;
 		drw_font_getexts(drw->fonts, buf, strlen(buf), &tmpmax, NULL);
 		if (tmpmax > inputw) {
 			inputw = tmpmax;
@@ -947,7 +957,7 @@ setup(void)
 static void
 usage(void)
 {
-	fputs("\nusage: dmenu [-bcfirstvFP] [-l lines] [-h height] [-p prompt]\n"
+	fputs("\nusage: dmenu [-bcfirstvFP] [-ix] [-l lines] [-h height] [-p prompt]\n"
 	      "             [-fn font] [-m monitor] [-w windowid]\n"
 				"             [-nhb color] [-nhf color] [-shb color] [-shf color]\n"
 	      "             [-nb color] [-nf color] [-sb color] [-sf color]\n", stderr);
@@ -984,6 +994,8 @@ main(int argc, char *argv[])
 			fuzzy = 0;
 		else if (!strcmp(argv[i], "-P"))   /* is the input a password */
 			passwd = 1;
+		else if (!strcmp(argv[i], "-ix"))  /* adds ability to return index in list */
+			print_index = 1;
 		else if (i + 1 == argc)
 			usage();
 		/* these options take one argument */

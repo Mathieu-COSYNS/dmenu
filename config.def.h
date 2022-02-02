@@ -51,3 +51,6 @@ static int fuzzy = 1;
 
 /* -r option; if 1, disables shift-return and ctrl-return */
 static int restrict_return = 0;
+
+/* print index instead of text */
+static int print_index = 0;

@@ -36,6 +36,8 @@ static unsigned int lines = 20;
 /* -h option; minimum height of a menu line */
 static unsigned int lineheight = 22;
 static unsigned int min_lineheight = 8;
+/* left and right margin are calculated from the font height multiplied by font_lrpad_multiplier */
+static unsigned int font_lrpad_multiplier = 0.75;
 
 /*
  * Characters not considered part of a word while deleting words

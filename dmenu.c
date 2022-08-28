@@ -863,7 +863,7 @@ setup(void)
 	bh = MAX(bh,lineheight);	/* make a menu line AT LEAST 'lineheight' tall */
 	lines = MAX(lines, 0);
 	mh = (lines + 1) * bh;
-	promptw = (prompt && *prompt) ? TEXTW(prompt) - lrpad / 4 : 0;
+	promptw = (prompt && *prompt) ? TEXTW(prompt) : 0;
 #ifdef XINERAMA
 	i = 0;
 	if (parentwin == root && (info = XineramaQueryScreens(dpy, &n))) {
@@ -1057,7 +1057,7 @@ main(int argc, char *argv[])
 	drw = drw_create(dpy, screen, root, wa.width - border_width * 2, wa.height - border_width * 2);
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
-	lrpad = drw->fonts->h * 0.75;
+	lrpad = drw->fonts->h * font_lrpad_multiplier;
 
 #ifdef __OpenBSD__
 	if (pledge("stdio rpath", NULL) == -1)

@@ -409,7 +409,7 @@ drw_input_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned 
 	drw_text_align(drw, x + curpos, 0, w - curpos, h, text + cursor, strlen(text) - cursor, AlignL);
 
 	/* draw cursor */
-	drw_rect(drw, x + curpos - 1, 2 + (h - drw->fonts->h) / 2, 2, drw->fonts->h - 4, 1, 0);
+	drw_rect(drw, x + curpos - (curpos ? 1 : 0), 2 + (h - drw->fonts->h) / 2, 2, drw->fonts->h - 4, 1, 0);
 
 	x -= lrpad / 2;
 	w += lrpad;

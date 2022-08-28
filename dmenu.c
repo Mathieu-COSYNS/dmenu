@@ -556,9 +556,11 @@ keypress(XKeyEvent *ev)
 			while (cursor > 0 && !strchr(worddelimiters, text[nextrune(-1)]))
 				insert(NULL, nextrune(-1) - cursor);
 			break;
-		case XK_y: /* paste selection */
+		case XK_v: /* paste selection */
+		case XK_V:
+		case XK_y:
 		case XK_Y:
-			XConvertSelection(dpy, (ev->state & ShiftMask) ? clip : XA_PRIMARY,
+			XConvertSelection(dpy, (ev->state & ShiftMask) ? XA_PRIMARY : clip,
 			                  utf8, utf8, win, CurrentTime);
 			return;
 		case XK_Left:

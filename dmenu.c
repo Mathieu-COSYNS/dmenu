@@ -566,11 +566,13 @@ keypress(XKeyEvent *ev)
 		case XK_Left:
 		case XK_KP_Left:
 			movewordedge(-1);
-			goto draw;
+			drawmenu();
+			return;
 		case XK_Right:
 		case XK_KP_Right:
 			movewordedge(+1);
-			goto draw;
+			drawmenu();
+			return;
 		case XK_Return:
 		case XK_KP_Enter:
 			if(!restrict_return)
@@ -586,10 +588,12 @@ keypress(XKeyEvent *ev)
 		switch(ksym) {
 		case XK_b:
 			movewordedge(-1);
-			goto draw;
+			drawmenu();
+			return;
 		case XK_f:
 			movewordedge(+1);
-			goto draw;
+			drawmenu();
+			return;
 		case XK_g: ksym = XK_Home;  break;
 		case XK_G: ksym = XK_End;   break;
 		case XK_h: ksym = XK_Up;    break;
@@ -743,7 +747,6 @@ insert:
 		break;
 	}
 
-draw:
 	drawmenu();
 }
 

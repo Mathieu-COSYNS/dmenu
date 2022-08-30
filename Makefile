@@ -3,10 +3,10 @@
 
 include config.mk
 
-SRC = drw.c dmenu.c stest.c util.c
+SRC = drw.c dmenu.c stest.c util.c desktop_apps_launch.c desktop_apps_list.c
 OBJ = $(SRC:.c=.o)
 
-all: options dmenu stest
+all: options dmenu stest desktop_apps_launch desktop_apps_list
 
 options:
 	@echo dmenu build options:
@@ -28,8 +28,14 @@ dmenu: dmenu.o drw.o util.o
 stest: stest.o
 	$(CC) -o $@ stest.o $(LDFLAGS)
 
+desktop_apps_launch: desktop_apps_launch.o
+	$(CC) -o $@ desktop_apps_launch.o $(LDFLAGS)
+
+desktop_apps_list: desktop_apps_list.o
+	$(CC) -o $@ desktop_apps_list.o $(LDFLAGS)
+
 clean:
-	rm -f dmenu stest $(OBJ) dmenu-$(VERSION).tar.gz
+	rm -f dmenu stest desktop_apps_launch desktop_apps_list $(OBJ) dmenu-$(VERSION).tar.gz
 
 dist: clean
 	mkdir -p dmenu-$(VERSION)

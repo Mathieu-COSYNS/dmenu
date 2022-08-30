@@ -966,7 +966,8 @@ setup(void)
 static void
 usage(void)
 {
-	fputs("\nusage: dmenu [-bcfirstvFP] [-ix] [-l lines] [-h height] [-p prompt]\n"
+	fputs("\nusage: dmenu [-bcfirstvFP] [-ix] [-l lines] [-h height]\n"
+	      "             [-p prompt] [-it text]\n"
 	      "             [-fn font] [-m monitor] [-w windowid]\n"
 				"             [-nhb color] [-nhf color] [-shb color] [-shf color]\n"
 	      "             [-nb color] [-nf color] [-sb color] [-sf color]\n", stderr);
@@ -1018,6 +1019,10 @@ main(int argc, char *argv[])
 			mon = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "-p"))   /* adds prompt to left of input field */
 			prompt = argv[++i];
+		else if (!strcmp(argv[i], "-it")) {   /* embedding window id */
+			const char * text = argv[++i];
+			insert(text, strlen(text));
+		}
 		else if (!strcmp(argv[i], "-fn"))  /* font or font set */
 			fonts[0] = argv[++i];
 		else if (!strcmp(argv[i], "-nb"))  /* normal background color */

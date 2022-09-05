@@ -1,0 +1,2 @@
+#!/bin/sh
+desktop_apps_launch $(desktop_apps_list | dmenu -r -d ' |' "$@") &

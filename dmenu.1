@@ -15,6 +15,10 @@ dmenu \- dynamic menu
 .IR prompt ]
 .RB [ \-it
 .IR text ]
+.RB [ \-d
+.IR separator ]
+.RB [ \-D
+.IR separator ]
 .RB [ \-bw
 .IR border_width ]
 .RB [ \-fn
@@ -99,6 +103,14 @@ defines the prompt to be displayed to the left of the input field.
 .TP
 .BI \-it " text".
 start with initial text input.
+.TP
+.BI \-d " separator"
+separate the input into two halves on the first occurrence of the given charcter.
+Display only the first half in dmenu and print the second half to stdout upon selection.
+Appending '|' to the separator reverses the display/printing order.
+.TP
+.BI \-D " separator"
+same as \-d but separate based on the last occurrence.
 .TP
 .BI \-bw " border_width"
 defines the tickness of the window border.

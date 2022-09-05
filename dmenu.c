@@ -34,12 +34,16 @@ enum { SchemeNorm, SchemeSel, SchemeNormOut, SchemeSelOut,
 struct item {
 	int index;
 	char *text;
+	char *text_output;
 	struct item *left, *right;
 	double distance;
 };
 
 static char text[BUFSIZ] = "";
 static char *embed;
+static char separator;
+static int separator_greedy;
+static int separator_reverse;
 static int bh, mw, mh;
 static int inputw = 0, promptw, passwd = 0;
 static int lrpad; /* sum of left and right padding */
@@ -685,7 +689,7 @@ insert:
 			if(print_index)
 				printf("%d\n", sel->index);
 			else
-				puts(sel->text);
+				puts(sel->text_output);
 			cleanup();
 			exit(0);
 		}
@@ -695,13 +699,13 @@ insert:
 					if(print_index)
 						printf("%d\n", items[selected_items[i]].index);
 					else
-						puts(items[selected_items[i]].text);
+						puts(items[selected_items[i]].text_output);
 				}
 			if (sel && !(ev->state & ShiftMask))
 				if(print_index)
 					printf("%d\n", sel->index);
 				else
-					puts(sel->text);
+					puts(sel->text_output);
 			else
 				puts(print_index ? "-1" : text);
 			cleanup();
@@ -785,6 +789,18 @@ readstdin(void)
 			*p = '\0';
 		if (!(items[i].text = strdup(buf)))
 			die("cannot strdup %u bytes:", strlen(buf) + 1);
+		if (separator && (p = separator_greedy ?
+		    strrchr(items[i].text, separator) : strchr(items[i].text, separator))) {
+			*p = '\0';
+			items[i].text_output = ++p;
+		} else {
+			items[i].text_output = items[i].text;
+		}
+		if (separator_reverse) {
+			p = items[i].text;
+			items[i].text = items[i].text_output;
+			items[i].text_output = p;
+		}
 		items[i].index = i;
 		drw_font_getexts(drw->fonts, buf, strlen(buf), &tmpmax, NULL);
 		if (tmpmax > inputw) {
@@ -968,8 +984,9 @@ usage(void)
 {
 	fputs("\nusage: dmenu [-bcfirstvFP] [-ix] [-l lines] [-h height]\n"
 	      "             [-p prompt] [-it text]\n"
+	      "             [-d separator] [-D separator]\n"
 	      "             [-fn font] [-m monitor] [-w windowid]\n"
-				"             [-nhb color] [-nhf color] [-shb color] [-shf color]\n"
+	      "             [-nhb color] [-nhf color] [-shb color] [-shf color]\n"
 	      "             [-nb color] [-nf color] [-sb color] [-sf color]\n", stderr);
 	exit(1);
 }
@@ -1022,6 +1039,11 @@ main(int argc, char *argv[])
 		else if (!strcmp(argv[i], "-it")) {   /* embedding window id */
 			const char * text = argv[++i];
 			insert(text, strlen(text));
+		}
+		else if (!strcmp(argv[i], "-d") || /* field separator */
+		         (separator_greedy = !strcmp(argv[i], "-D"))) {
+			separator = argv[++i][0];
+			separator_reverse = argv[i][1] == '|';
 		}
 		else if (!strcmp(argv[i], "-fn"))  /* font or font set */
 			fonts[0] = argv[++i];

@@ -151,18 +151,19 @@ prints version information to stdout, then exits.
 .BI \-w " windowid"
 embed into windowid.
 .SH USAGE
-dmenu is completely controlled by the keyboard.  Items are selected using the
-arrow keys, page up, page down, home, and end.
+dmenu can be controlled by the keyboard or by the mouse. Items are selected using the
+arrow keys, page up, page down, home, end or by scrolling with the mouse.
+.SS Keyboard commands
 .TP
 .B Tab
 Copy the selected item to the input field.
 .TP
 .B Return
-Confirm selection.  Prints the selected item to stdout and exits, returning
+Confirm selection.  Prints the selected item and the items selection to stdout and exits, returning
 success.
 .TP
 .B Ctrl-Return
-Confirm selection.  Prints the selected item to stdout and continues.
+Confirm selection.  Add the selected item to the items selection and continues.
 .TP
 .B Shift\-Return
 Confirm input.  Prints the input text to stdout and exits, returning success.
@@ -265,6 +266,33 @@ Page up
 .TP
 .B M\-l
 Down
+.SS Mouse commands
+.TP
+.B Button1
+If the mouse cursor is on the input field: clear input text and selection.
+If the mouse cursor is on an item: same as pressing Return.
+.TP
+.B Ctrl-Button1
+If the mouse cursor is on the input field: clear input text and selection.
+If the mouse cursor is on an item: same as pressing Ctrl-Return.
+.TP
+.B Shift-Button1
+If the mouse cursor is on input field: same as pressing Shift-Return.
+.TP
+.B Button2
+Paste from X clipboard
+.TP
+.B Shift\-Button2
+Paste from primary X selection
+.TP
+.B Button3
+Exit without selecting an item, returning failure.
+.TP
+.B Button4
+Page up
+.TP
+.B Button5
+Page down
 .SH SEE ALSO
 .IR dwm (1),
 .IR stest (1)

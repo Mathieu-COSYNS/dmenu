@@ -8,7 +8,7 @@
 #include <strings.h>
 #include <time.h>
 #include <unistd.h>
-
+#include <X11/cursorfont.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
@@ -27,9 +27,11 @@
 #define TEXTW(X)              (drw_fontset_getwidth(drw, (X)) + lrpad)
 
 /* enums */
+enum { CurNormal, CurPointer, CurText, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel, SchemeNormOut, SchemeSelOut,
 			 SchemeNormHighlight, SchemeSelHighlight, SchemeNormOutHighlight, SchemeSelOutHighlight,
 			 SchemeBorder, SchemePrompt, SchemeLast }; /* color schemes */
+typedef enum { UIInput, UIItems, UISymbolLeft, UISymbolRight, UILast } UIPart; /* ui parts */
 
 struct item {
 	int index;
@@ -38,6 +40,14 @@ struct item {
 	struct item *left, *right;
 	double distance;
 };
+
+typedef struct
+{
+	int x;
+	int y;
+	int w;
+	int h;
+} Rect;
 
 static char text[BUFSIZ] = "";
 static char *embed;
@@ -62,6 +72,7 @@ static Window root, parentwin, win;
 static XIC xic;
 
 static Drw *drw;
+static Cur *mouse_cursor[CurLast];
 static Clr *scheme[SchemeLast];
 
 #include "config.h"
@@ -159,6 +170,8 @@ cleanup(void)
 	size_t i;
 
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
+	for (i = 0; i < CurLast; i++)
+		drw_cur_free(drw, mouse_cursor[i]);
 	for (i = 0; i < SchemeLast; i++)
 		free(scheme[i]);
 	drw_free(drw);
@@ -510,6 +523,71 @@ movewordedge(int dir)
 }
 
 static void
+page_down(int draw)
+{
+	if (!next)
+		return;
+	sel = curr = next;
+	if(draw) {
+		calcoffsets();
+		drawmenu();
+	}
+}
+
+
+static void
+page_up(int draw)
+{
+	if (!prev)
+		return;
+	sel = curr = prev;
+	if(draw) {
+		calcoffsets();
+		drawmenu();
+	}
+}
+
+static void
+x_convert_selection(int shift)
+{
+	XConvertSelection(dpy, shift ? XA_PRIMARY : clip,
+	                  utf8, utf8, win, CurrentTime);
+}
+
+static void
+writestdout(unsigned int state)
+{
+	if (restrict_return) {
+		if (!sel || state & (ShiftMask | ControlMask))
+			return;
+		if(print_index)
+			printf("%d\n", sel->index);
+		else
+			puts(sel->text_output);
+		cleanup();
+		exit(0);
+	}
+	if (!(state & ControlMask)) {
+		for (int i = 0;i < selected_items_size;i++)
+			if (selected_items[i] != -1 && (!sel || sel->index != selected_items[i])) {
+				if(print_index)
+					printf("%d\n", items[selected_items[i]].index);
+				else
+					puts(items[selected_items[i]].text_output);
+			}
+		if (sel && !(state & ShiftMask))
+			if(print_index)
+				printf("%d\n", sel->index);
+			else
+				puts(sel->text_output);
+		else
+			puts(print_index ? "-1" : text);
+		cleanup();
+		exit(0);
+	}
+}
+
+static void
 keypress(XKeyEvent *ev)
 {
 	char buf[32];
@@ -564,8 +642,7 @@ keypress(XKeyEvent *ev)
 		case XK_V:
 		case XK_y:
 		case XK_Y:
-			XConvertSelection(dpy, (ev->state & ShiftMask) ? XA_PRIMARY : clip,
-			                  utf8, utf8, win, CurrentTime);
+			x_convert_selection(ev->state & ShiftMask);
 			return;
 		case XK_Left:
 		case XK_KP_Left:
@@ -673,48 +750,15 @@ insert:
 		break;
 	case XK_Next:
 	case XK_KP_Next:
-		if (!next)
-			return;
-		sel = curr = next;
-		calcoffsets();
-		break;
+		page_down(1);
+		return;
 	case XK_Prior:
 	case XK_KP_Prior:
-		if (!prev)
-			return;
-		sel = curr = prev;
-		calcoffsets();
-		break;
+		page_up(1);
+		return;
 	case XK_Return:
 	case XK_KP_Enter:
-		if (restrict_return) {
-			if (!sel || ev->state & (ShiftMask | ControlMask))
-				break;
-			if(print_index)
-				printf("%d\n", sel->index);
-			else
-				puts(sel->text_output);
-			cleanup();
-			exit(0);
-		}
-		if (!(ev->state & ControlMask)) {
-			for (int i = 0;i < selected_items_size;i++)
-				if (selected_items[i] != -1 && (!sel || sel->index != selected_items[i])) {
-					if(print_index)
-						printf("%d\n", items[selected_items[i]].index);
-					else
-						puts(items[selected_items[i]].text_output);
-				}
-			if (sel && !(ev->state & ShiftMask))
-				if(print_index)
-					printf("%d\n", sel->index);
-				else
-					puts(sel->text_output);
-			else
-				puts(print_index ? "-1" : text);
-			cleanup();
-			exit(0);
-		}
+		writestdout(ev->state);
 		break;
 	case XK_Right:
 	case XK_KP_Right:
@@ -752,6 +796,247 @@ insert:
 	}
 
 	drawmenu();
+}
+
+static void
+get_input_rect(Rect* rect)
+{
+	rect->x = promptw;
+	rect->y = 0;
+	rect->w = (lines > 0 || !matches) ? mw - rect->x : inputw;
+	rect->h = bh;
+}
+
+static void
+get_symbol_left_rect(Rect* rect)
+{
+	if (lines > 0 || !matches || !curr->left) {
+		rect->x = 0;
+		rect->y = 0;
+		rect->w = 0;
+		rect->h = 0;
+		return;
+	}
+
+	rect->x = promptw + inputw;
+	rect->y = 0;
+	rect->w = TEXTW(symbol_left);
+	rect->h = bh;
+}
+
+static void
+get_symbol_right_rect(Rect* rect)
+{
+	if (lines > 0 || !matches || !next) {
+		rect->x = 0;
+		rect->y = 0;
+		rect->w = 0;
+		rect->h = 0;
+		return;
+	}
+
+	rect->x = mw - TEXTW(symbol_right);
+	rect->y = 0;
+	rect->w = TEXTW(symbol_right);
+	rect->h = bh;
+}
+
+static void
+get_items_rect(Rect* rect)
+{
+	if (lines > 0) {
+		rect->x = 0;
+		rect->y = bh;
+		rect->w = mw;
+		rect->h = mh - bh;
+	} else if (matches) {
+		rect->x = promptw + inputw + (curr->left ? TEXTW(symbol_left) : 0);
+		rect->y = 0;
+		rect->w = mw - rect->x - (next ? TEXTW(symbol_right) : 0);
+		rect->h = bh;
+	} else {
+		rect->x = 0;
+		rect->y = 0;
+		rect->w = 0;
+		rect->h = 0;
+	}
+}
+
+
+static int
+is_in(UIPart ui_part, int x, int y)
+{
+	Rect rect = {0};
+
+	switch (ui_part)
+	{
+		case UIInput:
+			get_input_rect(&rect);
+			break;
+		case UIItems:
+			get_items_rect(&rect);
+			break;
+		case UISymbolLeft:
+			get_symbol_left_rect(&rect);
+			break;
+		case UISymbolRight:
+			get_symbol_right_rect(&rect);
+			break;
+		default:
+			return 0;
+	}
+
+	return x >= rect.x && x < rect.x + rect.w && y >= rect.y && y < rect.y + rect.h;
+}
+
+static UIPart
+get_ui_part_at(int x, int y)
+{
+	for(int i = 0; i < UILast; i++) {
+		if(is_in(i, x, y))
+			return i;
+	}
+
+	return UILast;
+}
+
+static void
+get_item_at(struct item **item, int x_at, int y_at) {
+	int x = 0, y = 0, h = bh, w;
+
+	if (lines > 0) {
+		w = mw - x;
+		for (*item = curr; *item != next; *item = (*item)->right) {
+			y += h;
+			if (y_at >= y && y_at <= (y + h))
+				return;
+		}
+	} else if (matches) {
+		x += inputw + promptw;
+		w = curr->left ? TEXTW(symbol_left) : 0;
+		for (*item = curr; *item != next; *item = (*item)->right) {
+			x += w;
+			w = MIN(TEXTW((*item)->text), mw - x - (next ? TEXTW(symbol_right) : 0));
+			if (x_at >= x && x_at <= x + w)
+				return;
+		}
+	}
+	
+	*item = NULL;
+}
+
+static void
+buttonpress(XEvent *e)
+{
+	UIPart ui_part;
+	struct item *item;
+	XButtonPressedEvent *ev = &e->xbutton;
+
+	if (ev->window != win)
+		return;
+
+	/* right-click: exit */
+	if (ev->button == Button3) {
+		cleanup();
+		exit(1);
+	}
+
+	/* middle-mouse click: paste selection */
+	if (ev->button == Button2) {
+		x_convert_selection(ev->state & ShiftMask);
+		return;
+	}
+
+	/* scroll up */
+	if (ev->button == Button4) {
+		page_up(0);
+		calcoffsets();
+		get_item_at(&item, ev->x, ev->y);
+		if (item != NULL && sel !=  item) {
+			sel = item;
+			drawmenu();
+		}
+		return;
+	}
+	
+	/* scroll down */
+	if (ev->button == Button5) {
+		page_down(0);
+		calcoffsets();
+		get_item_at(&item, ev->x, ev->y);
+		if (item != NULL && sel !=  item) {
+			sel = item;
+			drawmenu();
+		}
+		return;
+	}
+
+	/* left-click */
+	if (ev->button != Button1)
+		return;
+
+	ui_part = get_ui_part_at(ev->x, ev->y);
+
+	/* left-click on symbols: do nothing */
+	if (ui_part == UISymbolLeft || ui_part == UISymbolRight) {
+		return;
+	}
+
+	if (ui_part == UIInput) {
+		/* shift-left-click on input: print input on stdout */
+		if(ev->state & ShiftMask) {
+			writestdout(ev->state);
+			return;
+		}
+		/* left-click on input: clear input */
+		insert(NULL, -cursor);
+		drawmenu();
+		return;
+	}
+
+	if(ui_part == UIItems) {
+		if (ev->state & ShiftMask)
+			return;
+		/* ctrl-left-click on items: select item */
+		if(!restrict_return)
+			toggle_selected(sel);
+		/* left-click on items: print selected items on stdout */
+		get_item_at(&item, ev->x, ev->y);
+		if(item != NULL) {
+			writestdout(ev->state);
+			drawmenu();
+			return;
+		}
+	}
+}
+
+static void
+mousemove(XEvent *e)
+{
+	UIPart ui_part;
+	struct item* item;
+	XPointerMovedEvent *ev = &e->xmotion;
+
+	ui_part = get_ui_part_at(ev->x, ev->y);
+
+	if (ui_part == UIInput) {
+		drw_cur_set(drw, win, mouse_cursor[CurText]);
+		return;
+	}
+
+	if(ui_part == UIItems) {
+		drw_cur_set(drw, win, mouse_cursor[CurPointer]);
+		get_item_at(&item, ev->x, ev->y);
+		if (item != NULL) {
+			if(sel != item) {
+				sel = item;
+				drawmenu();
+			}
+			return;
+		}
+	}
+
+	drw_cur_set(drw, win, mouse_cursor[CurNormal]);
 }
 
 static void
@@ -831,6 +1116,12 @@ run(void)
 				break;
 			cleanup();
 			exit(1);
+		case ButtonPress:
+			buttonpress(&ev);
+			break;
+		case MotionNotify:
+			mousemove(&ev);
+			break;
 		case Expose:
 			if (ev.xexpose.count == 0)
 				drw_map(drw, win, 0, 0, mw, mh, border_width);
@@ -870,6 +1161,12 @@ setup(void)
 	Window pw;
 	int a, di, n, area = 0;
 #endif
+
+	/* init cursors */
+	mouse_cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
+	mouse_cursor[CurPointer] = drw_cur_create(drw, XC_hand2);
+	mouse_cursor[CurText] = drw_cur_create(drw, XC_xterm);
+
 	/* init appearance */
 	for (j = 0; j < SchemeLast; j++)
 		scheme[j] = drw_scm_create(drw, colors[j], 2);
@@ -943,7 +1240,8 @@ setup(void)
 	/* create menu window */
 	swa.override_redirect = True;
 	swa.background_pixel = scheme[SchemeNorm][ColBg].pixel;
-	swa.event_mask = ExposureMask | KeyPressMask | VisibilityChangeMask;
+	swa.event_mask = ExposureMask | KeyPressMask | VisibilityChangeMask |
+	                 ButtonPressMask | PointerMotionMask;
 	win = XCreateWindow(dpy, parentwin, x, y, mw + border_width * 2, mh + border_width * 2, 0,
 	                    CopyFromParent, CopyFromParent, CopyFromParent,
 	                    CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);

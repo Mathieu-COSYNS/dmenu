@@ -644,3 +644,9 @@ drw_cur_free(Drw *drw, Cur *cursor)
 	XFreeCursor(drw->dpy, cursor->cursor);
 	free(cursor);
 }
+
+void
+drw_cur_set(Drw *drw, Window win, Cur *cursor)
+{
+	XDefineCursor(drw->dpy, win, cursor->cursor);
+}

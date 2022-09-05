@@ -1,4 +1,6 @@
 config.h
 dmenu
 stest
+desktop_apps_launch
+desktop_apps_list
 *.o

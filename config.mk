@@ -18,9 +18,13 @@ FREETYPEINC = /usr/include/freetype2
 # OpenBSD (uncomment)
 #FREETYPEINC = $(X11INC)/freetype2
 
+# gtk
+GTKINC = `pkg-config --cflags gtk+-3.0`
+GTKLIBS = `pkg-config --libs gtk+-3.0`
+
 # includes and libs
-INCS = -I$(X11INC) -I$(FREETYPEINC)
-LIBS = -L$(X11LIB) -lX11 $(XINERAMALIBS) $(FREETYPELIBS) -lm
+INCS = -I$(X11INC) -I$(FREETYPEINC) $(GTKINC)
+LIBS = -L$(X11LIB) -lX11 $(XINERAMALIBS) $(FREETYPELIBS) -lm $(GTKLIBS)
 
 # flags
 CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\" $(XINERAMAFLAGS)
